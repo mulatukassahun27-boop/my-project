@@ -1,0 +1,16 @@
+# Sensitive config — rename database.example.php to database.php and update credentials
+# config/database.php
+
+# Ignore uploaded files
+assets/images/uploads/
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
+
+# Ignore editor files
+.vscode/
+.idea/
+
+# Ignore logs
+*.log
