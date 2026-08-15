@@ -1,239 +1,182 @@
 <?php
-
+require_once '../config/database.php';
 require_once '../config/session.php';
 
-requireRole('student');
+requireStudent();
 
-?>
-<?php
-include '../config/session.php';
-include '../config/database.php';
+$user_id = (int)$_SESSION['user_id'];
+$message = '';
+$msgType = '';
 
-$user_id = $_SESSION['user_id'];
-$message = "";
+if (isset($_POST['update'])) {
 
-// Update Profile
-if(isset($_POST['update']))
-{
-    $full_name = trim($_POST['full_name']);
-    $email     = trim($_POST['email']);
-    $phone     = trim($_POST['phone']);
-    $gender    = $_POST['gender'];
+    $full_name = trim($_POST['full_name'] ?? '');
+    $email     = trim($_POST['email']     ?? '');
+    $phone     = trim($_POST['phone']     ?? '');
+    $gender    = $_POST['gender']          ?? '';
 
-    if(empty($full_name) || empty($email) || empty($gender))
-    {
-        $message = "Please fill all required fields.";
-    }
-    else
-    {
-        // Check if email already exists for another user
-        $check = $conn->prepare("SELECT id FROM users WHERE email=? AND id<>?");
+    if ($full_name === '' || $email === '' || $gender === '') {
+        $message = 'Please fill all required fields.';
+        $msgType = 'error';
+
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $message = 'Please enter a valid email address.';
+        $msgType = 'error';
+
+    } else {
+
+        $check = $conn->prepare("SELECT id FROM users WHERE email = ? AND id <> ? LIMIT 1");
         $check->bind_param("si", $email, $user_id);
         $check->execute();
+        $emailTaken = $check->get_result()->num_rows > 0;
+        $check->close();
 
-        if($check->get_result()->num_rows > 0)
-        {
-            $message = "Email already exists.";
-        }
-        else
-        {
-            $update = $conn->prepare("UPDATE users SET full_name=?, gender=?, email=?, phone=? WHERE id=?");
+        if ($emailTaken) {
+            $message = 'That email is already in use by another account.';
+            $msgType = 'error';
+
+        } else {
+            $update = $conn->prepare("UPDATE users SET full_name = ?, gender = ?, email = ?, phone = ? WHERE id = ?");
             $update->bind_param("ssssi", $full_name, $gender, $email, $phone, $user_id);
 
-            if($update->execute())
-            {
+            if ($update->execute()) {
                 $_SESSION['full_name'] = $full_name;
-                $message = "Profile updated successfully.";
+                $message = 'Profile updated successfully.';
+                $msgType = 'success';
+            } else {
+                $message = 'Update failed. Please try again.';
+                $msgType = 'error';
             }
-            else
-            {
-                $message = "Update failed.";
-            }
+            $update->close();
         }
     }
 }
 
-// Load current user information
-$stmt = $conn->prepare("SELECT * FROM users WHERE id=?");
+$stmt = $conn->prepare("SELECT * FROM users WHERE id = ? LIMIT 1");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $user = $stmt->get_result()->fetch_assoc();
+$stmt->close();
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Profile - Student</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f4f6f9; }
 
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+        .sidebar { width: 250px; height: 100vh; background: #003366; position: fixed; left: 0; top: 0; overflow-y: auto; }
+        .sidebar h2 { color: white; text-align: center; padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.2); }
+        .sidebar a { display: block; color: white; padding: 14px 20px; text-decoration: none; font-size: 14px; }
+        .sidebar a:hover  { background: #00509e; }
+        .sidebar a.active { background: #00509e; font-weight: bold; }
 
-<title>Edit Profile</title>
+        .main { margin-left: 250px; padding: 25px; }
+        .top-section { display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px; }
+        .top-section h1 { color: #003366; }
+        .back-btn { background: #374151; color: white; text-decoration: none; padding: 10px 16px; border-radius: 6px; }
 
-<link rel="stylesheet" href="../assets/css/style.css">
+        .message { padding: 14px 18px; border-radius: 7px; margin-bottom: 20px; font-weight: bold; }
+        .success { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+        .error   { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
 
-<style>
+        .card { background: white; padding: 28px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); max-width: 600px; }
+        .card h2 { color: #003366; margin-bottom: 22px; }
 
-body{
-    margin:0;
-    font-family:Arial;
-    background:#f4f6f9;
-}
+        .form-group { margin-bottom: 18px; }
+        .form-group label { display: block; font-weight: bold; margin-bottom: 7px; color: #374151; font-size: 14px; }
+        .form-group input, .form-group select {
+            width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;
+        }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: #003366; }
 
-.sidebar{
-    width:250px;
-    height:100vh;
-    background:#003366;
-    position:fixed;
-}
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 
-.sidebar h2{
-    color:white;
-    text-align:center;
-    padding:20px;
-}
+        .save-btn { background: #003366; color: white; border: none; padding: 13px 30px; border-radius: 6px; font-size: 15px; font-weight: bold; cursor: pointer; }
+        .save-btn:hover { background: #00509e; }
 
-.sidebar a{
-    display:block;
-    color:white;
-    padding:15px;
-    text-decoration:none;
-}
+        .cancel-btn { display: inline-block; margin-left: 10px; padding: 13px 22px; background: #6b7280; color: white; text-decoration: none; border-radius: 6px; font-size: 15px; }
+        .cancel-btn:hover { background: #4b5563; }
 
-.sidebar a:hover{
-    background:#00509e;
-}
+        .footer { text-align: center; padding: 25px; color: #777; margin-top: 20px; }
 
-.main{
-    margin-left:250px;
-    padding:20px;
-}
-
-.card{
-    background:white;
-    padding:20px;
-    border-radius:8px;
-    box-shadow:0 2px 5px rgba(0,0,0,.2);
-}
-
-input,select{
-    width:100%;
-    padding:12px;
-    margin:10px 0;
-}
-
-button{
-    background:#003366;
-    color:white;
-    padding:12px 25px;
-    border:none;
-    cursor:pointer;
-}
-
-button:hover{
-    background:#00509e;
-}
-
-.success{
-    color:green;
-    font-weight:bold;
-}
-
-.error{
-    color:red;
-    font-weight:bold;
-}
-
-</style>
-
+        @media(max-width: 600px) { .form-row { grid-template-columns: 1fr; } }
+    </style>
 </head>
-
 <body>
 
 <div class="sidebar">
-
-<h2>Student Panel</h2>
-
-<a href="dashboard.php">Dashboard</a>
-<a href="profile.php">My Profile</a>
-<a href="edit_profile.php">Edit Profile</a>
-<a href="select_department.php">Department Selection</a>
-<a href="my_choices.php">My Choices</a>
-<a href="placement_result.php">Placement Result</a>
-<a href="change_password.php">Change Password</a>
-<a href="../logout.php">Logout</a>
-
+    <h2>Student Panel</h2>
+    <a href="dashboard.php">🏠 Dashboard</a>
+    <a href="profile.php" class="active">👤 My Profile</a>
+    <a href="select_department.php">📚 Select Department</a>
+    <a href="my_choices.php">✅ My Choices</a>
+    <a href="placement_result.php">🎓 Placement Result</a>
+    <a href="notifications.php">🔔 Notifications</a>
+    <a href="change_password.php">🔑 Change Password</a>
+    <a href="../logout.php">🚪 Logout</a>
 </div>
 
 <div class="main">
 
-<div class="card">
+    <div class="top-section">
+        <h1>Edit Profile</h1>
+        <a href="profile.php" class="back-btn">← My Profile</a>
+    </div>
 
-<h2>Edit Profile</h2>
+    <?php if ($message !== ''): ?>
+        <div class="message <?= $msgType ?>"><?= htmlspecialchars($message) ?></div>
+    <?php endif; ?>
 
-<hr>
+    <div class="card">
+        <h2>Update Your Information</h2>
 
-<?php
-if($message!="")
-{
-    if(strpos($message,"successfully")!==false)
-        echo "<p class='success'>$message</p>";
-    else
-        echo "<p class='error'>$message</p>";
-}
-?>
+        <form method="POST">
 
-<form method="POST">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Full Name <span style="color:red">*</span></label>
+                    <input type="text" name="full_name"
+                           value="<?= htmlspecialchars($user['full_name']) ?>" required>
+                </div>
 
-<label>Full Name</label>
+                <div class="form-group">
+                    <label>Gender <span style="color:red">*</span></label>
+                    <select name="gender" required>
+                        <option value="">Select</option>
+                        <option value="Male"   <?= $user['gender'] === 'Male'   ? 'selected' : '' ?>>Male</option>
+                        <option value="Female" <?= $user['gender'] === 'Female' ? 'selected' : '' ?>>Female</option>
+                    </select>
+                </div>
+            </div>
 
-<input
-type="text"
-name="full_name"
-value="<?php echo htmlspecialchars($user['full_name']); ?>"
-required>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Email <span style="color:red">*</span></label>
+                    <input type="email" name="email"
+                           value="<?= htmlspecialchars($user['email']) ?>" required>
+                </div>
 
-<label>Gender</label>
+                <div class="form-group">
+                    <label>Phone</label>
+                    <input type="text" name="phone"
+                           value="<?= htmlspecialchars($user['phone'] ?? '') ?>"
+                           placeholder="e.g. 0911234567">
+                </div>
+            </div>
 
-<select name="gender" required>
+            <button type="submit" name="update" class="save-btn">Save Changes</button>
+            <a href="profile.php" class="cancel-btn">Cancel</a>
 
-<option value="Male" <?php if($user['gender']=="Male") echo "selected"; ?>>Male</option>
-
-<option value="Female" <?php if($user['gender']=="Female") echo "selected"; ?>>Female</option>
-
-</select>
-
-<label>Email</label>
-
-<input
-type="email"
-name="email"
-value="<?php echo htmlspecialchars($user['email']); ?>"
-required>
-
-<label>Phone</label>
-
-<input
-type="text"
-name="phone"
-value="<?php echo htmlspecialchars($user['phone']); ?>">
-
-<br>
-
-<button
-type="submit"
-name="update">
-
-Update Profile
-
-</button>
-
-<a href="profile.php" class="btn">Cancel</a>
-
-</form>
+        </form>
+    </div>
 
 </div>
 
-</div>
+<footer class="footer">Department Selection System © 2026 — Debre Markos University</footer>
 
 </body>
 </html>

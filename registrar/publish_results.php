@@ -13,14 +13,29 @@ $messageType = '';
 
 if (isset($_POST['publish'])) {
 
-    $update = $conn->query("UPDATE placements SET published = 'Yes'");
+    // Get active academic year
+    $activeYearRow = $conn->query("
+        SELECT id, year_name FROM academic_years WHERE status = 'Active' LIMIT 1
+    ")->fetch_assoc();
 
-    if ($update) {
-        $message = 'Placement results published successfully.';
-        $messageType = 'success';
-    } else {
-        $message = 'Failed to publish results.';
+    if (!$activeYearRow) {
+        $message     = 'No active academic year found. Cannot publish.';
         $messageType = 'error';
+    } else {
+        $activeYearId = (int)$activeYearRow['id'];
+        $stmt = $conn->prepare("
+            UPDATE placements SET published = 'Yes'
+            WHERE academic_year_id = ?
+        ");
+        $stmt->bind_param("i", $activeYearId);
+        if ($stmt->execute()) {
+            $message     = 'Placement results for <strong>' . htmlspecialchars($activeYearRow['year_name']) . '</strong> published successfully.';
+            $messageType = 'success';
+        } else {
+            $message     = 'Failed to publish results.';
+            $messageType = 'error';
+        }
+        $stmt->close();
     }
 }
 

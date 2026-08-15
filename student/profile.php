@@ -1,205 +1,179 @@
 <?php
-
+require_once '../config/database.php';
 require_once '../config/session.php';
 
-requireRole('student');
+requireStudent();
 
-?>
-<?php
-include '../config/session.php';
-include '../config/database.php';
+$user_id = (int)$_SESSION['user_id'];
 
-$user_id = $_SESSION['user_id'];
-
-$stmt = $conn->prepare("SELECT * FROM users WHERE id=?");
+$stmt = $conn->prepare("SELECT * FROM users WHERE id = ? LIMIT 1");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
-$result = $stmt->get_result();
-$user = $result->fetch_assoc();
+$user = $stmt->get_result()->fetch_assoc();
+$stmt->close();
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile - Student</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f4f6f9; }
 
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+        .sidebar { width: 250px; height: 100vh; background: #003366; position: fixed; left: 0; top: 0; overflow-y: auto; }
+        .sidebar h2 { color: white; text-align: center; padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.2); }
+        .sidebar a { display: block; color: white; padding: 14px 20px; text-decoration: none; font-size: 14px; }
+        .sidebar a:hover  { background: #00509e; }
+        .sidebar a.active { background: #00509e; font-weight: bold; }
 
-<title>Student Profile</title>
+        .main { margin-left: 250px; padding: 25px; }
 
-<link rel="stylesheet" href="../assets/css/style.css">
+        .top-section { display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px; }
+        .top-section h1 { color: #003366; }
 
-<style>
+        .back-btn { background: #374151; color: white; text-decoration: none; padding: 10px 16px; border-radius: 6px; }
 
-body{
-    margin:0;
-    font-family:Arial;
-    background:#f4f6f9;
-}
+        .card { background: white; padding: 28px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); max-width: 680px; }
+        .card h2 { color: #003366; margin-bottom: 20px; }
 
-.sidebar{
-    width:250px;
-    height:100vh;
-    position:fixed;
-    left:0;
-    top:0;
-    background:#003366;
-}
+        /* Avatar */
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 24px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
 
-.sidebar h2{
-    color:white;
-    text-align:center;
-    padding:20px;
-}
+        .avatar {
+            width: 70px; height: 70px;
+            border-radius: 50%;
+            background: #003366;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
 
-.sidebar a{
-    display:block;
-    color:white;
-    text-decoration:none;
-    padding:15px;
-}
+        .profile-name h3 { font-size: 20px; color: #111827; }
+        .profile-name p  { color: #6b7280; font-size: 14px; }
 
-.sidebar a:hover{
-    background:#00509e;
-}
+        /* Info grid */
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 22px; }
 
-.main{
-    margin-left:250px;
-    padding:20px;
-}
+        .info-item { background: #f8fafc; padding: 14px; border-radius: 8px; border: 1px solid #e5e7eb; }
+        .info-item label { display: block; color: #6b7280; font-size: 12px; margin-bottom: 4px; }
+        .info-item strong { color: #111827; font-size: 15px; }
 
-.card{
-    background:white;
-    padding:20px;
-    border-radius:8px;
-    box-shadow:0 2px 5px rgba(0,0,0,.2);
-}
+        .status-active  { background: #dcfce7; color: #166534; padding: 3px 10px; border-radius: 20px; font-size: 13px; }
+        .status-blocked { background: #fee2e2; color: #991b1b; padding: 3px 10px; border-radius: 20px; font-size: 13px; }
 
-table{
-    width:100%;
-    border-collapse:collapse;
-}
+        .btn { display: inline-block; padding: 10px 22px; background: #003366; color: white; text-decoration: none; border-radius: 6px; font-size: 14px; margin: 4px; }
+        .btn:hover { background: #00509e; }
 
-table td{
-    border:1px solid #ddd;
-    padding:12px;
-}
+        .footer { text-align: center; padding: 25px; color: #777; margin-top: 20px; }
 
-table td:first-child{
-    font-weight:bold;
-    width:220px;
-    background:#f0f0f0;
-}
-
-.btn{
-    display:inline-block;
-    padding:10px 20px;
-    background:#003366;
-    color:white;
-    text-decoration:none;
-    border-radius:5px;
-}
-
-.btn:hover{
-    background:#00509e;
-}
-
-</style>
-
+        @media(max-width: 600px) { .info-grid { grid-template-columns: 1fr; } }
+    </style>
 </head>
-
 <body>
 
 <div class="sidebar">
-
-<h2>Student Panel</h2>
-
-<a href="dashboard.php">Dashboard</a>
-
-<a href="profile.php">My Profile</a>
-
-<a href="edit_profile.php">Edit Profile</a>
-
-<a href="select_department.php">Department Selection</a>
-
-<a href="my_choices.php">My Choices</a>
-
-<a href="placement_result.php">Placement Result</a>
-
-<a href="change_password.php">Change Password</a>
-
-<a href="../logout.php">Logout</a>
-
+    <h2>Student Panel</h2>
+    <a href="dashboard.php">🏠 Dashboard</a>
+    <a href="profile.php" class="active">👤 My Profile</a>
+    <a href="select_department.php">📚 Select Department</a>
+    <a href="my_choices.php">✅ My Choices</a>
+    <a href="placement_result.php">🎓 Placement Result</a>
+    <a href="notifications.php">🔔 Notifications</a>
+    <a href="change_password.php">🔑 Change Password</a>
+    <a href="../logout.php">🚪 Logout</a>
 </div>
 
 <div class="main">
 
-<div class="card">
+    <div class="top-section">
+        <h1>My Profile</h1>
+        <a href="dashboard.php" class="back-btn">← Dashboard</a>
+    </div>
 
-<h2>Student Profile</h2>
+    <div class="card">
 
-<hr><br>
+        <div class="profile-header">
+            <div class="avatar">
+                <?= strtoupper(substr($user['full_name'] ?? 'S', 0, 1)) ?>
+            </div>
+            <div class="profile-name">
+                <h3><?= htmlspecialchars($user['full_name']) ?></h3>
+                <p><?= htmlspecialchars($user['email']) ?></p>
+            </div>
+        </div>
 
-<table>
+        <div class="info-grid">
 
-<tr>
-<td>Full Name</td>
-<td><?php echo htmlspecialchars($user['full_name']); ?></td>
-</tr>
+            <div class="info-item">
+                <label>Full Name</label>
+                <strong><?= htmlspecialchars($user['full_name']) ?></strong>
+            </div>
 
-<tr>
-<td>Student ID</td>
-<td><?php echo htmlspecialchars($user['student_id']); ?></td>
-</tr>
+            <div class="info-item">
+                <label>Student ID</label>
+                <strong><?= htmlspecialchars($user['student_id'] ?: 'Not set') ?></strong>
+            </div>
 
-<tr>
-<td>Gender</td>
-<td><?php echo htmlspecialchars($user['gender']); ?></td>
-</tr>
+            <div class="info-item">
+                <label>Gender</label>
+                <strong><?= htmlspecialchars($user['gender'] ?: 'Not set') ?></strong>
+            </div>
 
-<tr>
-<td>Email</td>
-<td><?php echo htmlspecialchars($user['email']); ?></td>
-</tr>
+            <div class="info-item">
+                <label>CGPA</label>
+                <strong><?= number_format((float)($user['cgpa'] ?? 0), 2) ?></strong>
+            </div>
 
-<tr>
-<td>Phone</td>
-<td><?php echo htmlspecialchars($user['phone']); ?></td>
-</tr>
+            <div class="info-item">
+                <label>Email</label>
+                <strong><?= htmlspecialchars($user['email']) ?></strong>
+            </div>
 
-<tr>
-<td>Username</td>
-<td><?php echo htmlspecialchars($user['username']); ?></td>
-</tr>
+            <div class="info-item">
+                <label>Phone</label>
+                <strong><?= htmlspecialchars($user['phone'] ?: 'Not set') ?></strong>
+            </div>
 
-<tr>
-<td>Role</td>
-<td><?php echo ucfirst(htmlspecialchars($user['role'])); ?></td>
-</tr>
+            <div class="info-item">
+                <label>Username</label>
+                <strong><?= htmlspecialchars($user['username']) ?></strong>
+            </div>
 
-<tr>
-<td>Status</td>
-<td><?php echo htmlspecialchars($user['status']); ?></td>
-</tr>
+            <div class="info-item">
+                <label>Account Status</label>
+                <span class="<?= $user['status'] === 'Active' ? 'status-active' : 'status-blocked' ?>">
+                    <?= htmlspecialchars($user['status']) ?>
+                </span>
+            </div>
 
-<tr>
-<td>Registered On</td>
-<td><?php echo htmlspecialchars($user['created_at']); ?></td>
-</tr>
+            <div class="info-item">
+                <label>Registered On</label>
+                <strong><?= htmlspecialchars($user['created_at']) ?></strong>
+            </div>
 
-</table>
+        </div>
 
-<br>
+        <a href="edit_profile.php" class="btn">✏️ Edit Profile</a>
+        <a href="change_password.php" class="btn">🔑 Change Password</a>
 
-<a href="edit_profile.php" class="btn">Edit Profile</a>
-
-<a href="dashboard.php" class="btn">Back Dashboard</a>
+    </div>
 
 </div>
 
-</div>
+<footer class="footer">Department Selection System © 2026 — Debre Markos University</footer>
 
 </body>
-
 </html>

@@ -147,6 +147,22 @@ requireRegistrar();
             Manage students, departments, colleges, quotas and placement.
         </p>
 
+        <?php
+        $activeYear = $conn->query("SELECT year_name FROM academic_years WHERE status='Active' LIMIT 1")->fetch_assoc();
+        ?>
+        <?php if ($activeYear): ?>
+        <p style="margin-top:10px;">
+            <strong>Active Academic Year:</strong>
+            <span style="background:#dbeafe;color:#1e3a8a;padding:4px 12px;border-radius:20px;font-weight:bold;">
+                <?= htmlspecialchars($activeYear['year_name']) ?>
+            </span>
+        </p>
+        <?php else: ?>
+        <p style="margin-top:10px; color:#dc2626;">
+            ⚠️ No active academic year set. Ask the Admin to activate one.
+        </p>
+        <?php endif; ?>
+
     </div>
 
 
@@ -193,11 +209,11 @@ requireRegistrar();
             <h3>Colleges</h3>
 
             <p>
-                View colleges and schools.
+                Colleges are managed by the Admin.
             </p>
 
             <a href="../admin/manage_colleges.php" style="background:#6b7280;">
-                View Colleges
+                View Colleges (Admin)
             </a>
 
         </div>
@@ -210,11 +226,11 @@ requireRegistrar();
             <h3>Academic Year</h3>
 
             <p>
-                View active academic year.
+                Academic years are managed by the Admin.
             </p>
 
             <a href="../admin/manage_academic_year.php" style="background:#6b7280;">
-                Academic Year
+                View Years (Admin)
             </a>
 
         </div>

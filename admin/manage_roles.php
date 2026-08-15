@@ -1,16 +1,8 @@
 <?php
-
+require_once '../config/database.php';
 require_once '../config/session.php';
 
-requireRole('admin');
-
-?>
-
-
-<?php
-
-include '../config/session.php';
-include '../config/database.php';
+requireAdmin();
 
 
 $message="";
@@ -457,6 +449,15 @@ Student
 <?php if($row['role']=="registrar") echo "selected"; ?>>
 
 Registrar
+
+</option>
+
+
+
+<option value="department_head"
+<?php if($row['role']=="department_head") echo "selected"; ?>>
+
+Department Head
 
 </option>
 

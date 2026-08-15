@@ -1,14 +1,8 @@
 <?php
-
+require_once '../config/database.php';
 require_once '../config/session.php';
 
-requireRole('admin');
-
-?>
-<?php
-
-include '../config/session.php';
-include '../config/database.php';
+requireAdmin();
 
 
 // Total Users
